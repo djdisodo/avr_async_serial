@@ -9,10 +9,12 @@ edition = "2021"
 ufmt = "0.2.0"
 nb = "0.1.2"
 embedded-hal = "0.2.3"
-embedded-hal-async = "0.2.0-alpha.2"
 embedded-io-async = "0.6.0"
-avr-device = "0.5.3"
+embedded-io = "0.6.1"
+avr-device = { version = "0.5.3", features = ["rt"] }
 paste = "1.0.14"
+portable-atomic = "1.5.1"
+env_int = { path = "../env_int" }
 
 [dependencies.atmega-hal]
 git = "https://github.com/rahix/avr-hal"
@@ -23,3 +25,31 @@ git = "https://github.com/rahix/avr-hal.git"
 rev = "190f2c3cb8d29e10f71119352b912369dc5a1fb7"
 
 [features]
+default = ["usart0", "atmega328p"]
+usart0 = []
+cobs0 = ["usart0"]
+
+device-selected = []
+atmega48p = ["avr-device/atmega48p", "device-selected"]
+atmega168 = ["avr-device/atmega168", "device-selected"]
+atmega328p = ["avr-device/atmega328p", "atmega-hal/atmega328p", "device-selected"]
+atmega328pb = ["avr-device/atmega328pb", "device-selected"]
+atmega32a = ["avr-device/atmega32a", "device-selected"]
+atmega32u4 = ["avr-device/atmega32u4", "device-selected"]
+atmega2560 = ["avr-device/atmega2560", "device-selected"]
+atmega128a = ["avr-device/atmega128a", "device-selected"]
+atmega1280 = ["avr-device/atmega1280", "device-selected"]
+atmega1284p = ["avr-device/atmega1284p", "device-selected"]
+atmega8 = ["avr-device/atmega8", "device-selected"]
+
+# Configure the build for minimal size - AVRs have very little program memory
+[profile.dev]
+panic = "abort"
+lto = true
+opt-level = "s"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"

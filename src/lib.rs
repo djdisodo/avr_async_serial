@@ -89,11 +89,15 @@ impl<RAW: UsartOps2> ErrorType for UsartRead<RAW> { type Error = ReadOverflowErr
 
 impl<RAW: UsartOps2> embedded_io_async::Read for UsartRead<RAW> {
     async fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
+        if self.p.raw_read_overflow() {
+            return Err(ReadOverflowError);
+        }
         if buf.len() == 0 {
             return Ok(0);
         }
-        if self.p.raw_read_overflow() {
-            return Err(ReadOverflowError);
+        let read = self.p.raw_read(buf);
+        if read != 0 {
+            return Ok(read);
         }
         Ok((AsyncRead {
             raw: &mut self.p,
@@ -111,8 +115,8 @@ impl<RAW: UsartOps2> core::future::Future for AsyncRead<'_, RAW> {
     type Output = usize;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        self.raw.raw_read_waker(Some(cx.waker().clone()));
         let buf: &mut [u8] = unsafe {core::ptr::read(&self.buffer)};
+        self.raw.raw_read_waker(Some(cx.waker().clone()));
         let read = self.raw.raw_read(buf);
         if read != 0 {
             Poll::Ready(read)
@@ -153,6 +157,10 @@ impl<RAW: UsartOps2> embedded_io_async::Write for UsartWrite<RAW> {
         if buf.len() == 0 {
             return Ok(0);
         }
+        let wrote = self.p.raw_write(buf);
+        if wrote != 0 {
+            return Ok(wrote);
+        }
         Ok((AsyncWrite {
             p: unsafe { core::ptr::read(&self.p) },
             buffer: buf
@@ -176,8 +184,8 @@ impl<RAW: UsartOps2> core::future::Future for AsyncWrite<'_, RAW> {
     type Output = usize;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        self.p.raw_write_waker(Some(cx.waker().clone()));
         let buffer = self.buffer;
+        self.p.raw_write_waker(Some(cx.waker().clone()));
         let wrote = self.p.raw_write(buffer);
         if wrote != 0 {
             Poll::Ready(wrote)
@@ -288,6 +296,7 @@ macro_rules! impl_usart_traditional {
             impl UsartOps2 for $USART {
                 // type TX = $crate::port::Pin<$crate::port::mode::Output, $txpin>;
                 // type RX = $crate::port::Pin<$crate::port::mode::Input, $rxpin>;
+                #[inline(always)]
                 fn raw_baudrate<CLOCK>(&mut self, baudrate: Baudrate<CLOCK>) {
                     self.[<ubrr $n>].write(|w| w.bits(baudrate.ubrr));
                     self.[<ucsr $n a>].write(|w| w.[<u2x $n>]().bit(baudrate.u2x));
@@ -301,6 +310,7 @@ macro_rules! impl_usart_traditional {
                     );
                 }
 
+                #[inline(always)]
                 fn raw_write_init(&mut self) {
                     unsafe {
                         self.[<ucsr $n b>].modify(|r, w| w.bits(r.bits())
@@ -310,6 +320,7 @@ macro_rules! impl_usart_traditional {
                     }
                 }
 
+                #[inline(always)]
                 fn raw_write(&mut self, buffer: &[u8]) -> usize {
                     unsafe {
                         let wrote = [<WRITE_BUFFER $n>].write(buffer).unwrap();
@@ -318,6 +329,7 @@ macro_rules! impl_usart_traditional {
                     }
                 }
 
+                #[inline(always)]
                 fn raw_write_waker(&mut self, waker: Option<Waker>) {
                     unsafe {
                         avr_device::interrupt::free(|_| {
@@ -326,6 +338,7 @@ macro_rules! impl_usart_traditional {
                     }
                 }
 
+                #[inline(always)]
                 fn raw_write_flush(&mut self) {
                     unsafe {
                         USART_FLAG.and([<FLAG_FLUSH $n>], Ordering::SeqCst);
@@ -333,10 +346,12 @@ macro_rules! impl_usart_traditional {
                     }
                 }
 
+                #[inline(always)]
                 fn raw_write_done(&mut self) -> bool {
                     self.[<ucsr $n b>].read().[<udrie $n>]().bit_is_clear()
                 }
 
+                #[inline(always)]
                 fn raw_write_stop(&mut self) {
                     unsafe {
                         self.[<ucsr $n b>].modify(|r, w| w.bits(r.bits()).[<udrie $n>]().clear_bit());
@@ -351,11 +366,12 @@ macro_rules! impl_usart_traditional {
                     }
                 }
 
+                #[inline(always)]
                 fn raw_write_enabled(&mut self) -> bool {
                     self.[<ucsr $n b>].read().[<txen $n>]().bit()
                 }
 
-
+                #[inline(always)]
                 fn raw_read_init(&mut self) {
                     unsafe {
                         self.[<ucsr $n b>].modify(|r, w| w.bits(r.bits())
@@ -365,6 +381,7 @@ macro_rules! impl_usart_traditional {
                     }
                 }
 
+                #[inline(always)]
                 fn raw_read(&mut self, buffer: &mut [u8]) -> usize {
                     unsafe {
                         let wrote = [<READ_BUFFER $n>].read(buffer).unwrap();
@@ -372,6 +389,7 @@ macro_rules! impl_usart_traditional {
                     }
                 }
 
+                #[inline(always)]
                 fn raw_read_overflow(&mut self) -> bool {
                     unsafe {
                         let v = USART_FLAG.load(Ordering::SeqCst) & [<FLAG_ERROR_READ_OVERFLOW $n>] != 0;
@@ -380,6 +398,7 @@ macro_rules! impl_usart_traditional {
                     }
                 }
 
+                #[inline(always)]
                 fn raw_read_waker(&mut self, waker: Option<Waker>) {
                     unsafe {
                         avr_device::interrupt::free(|_| {
@@ -388,6 +407,7 @@ macro_rules! impl_usart_traditional {
                     }
                 }
 
+                #[inline(always)]
                 fn raw_read_listen(&mut self, listen: bool) {
                     unsafe {
                         self.[<ucsr $n b>].modify(|r, w| w.bits(r.bits()).[<rxcie $n>]().bit(listen));
@@ -401,6 +421,7 @@ macro_rules! impl_usart_traditional {
                     }
                 }
 
+                #[inline(always)]
                 fn raw_read_enabled(&mut self) -> bool {
                     self.[<ucsr $n b>].read().[<rxen $n>]().bit()
                 }

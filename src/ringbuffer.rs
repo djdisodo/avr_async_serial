@@ -27,6 +27,7 @@ impl<const SIZE: usize> Default for RingBuffer<SIZE> {
 impl<const SIZE: usize> ErrorType for RingBuffer<SIZE> { type Error = Infallible; }
 
 impl<const SIZE: usize> Write for RingBuffer<SIZE> {
+    #[inline(always)]
     fn write(&mut self, mut buf: &[u8]) -> Result<usize, Self::Error> {
         let mut write = 0;
         let head = self.head.load(Ordering::SeqCst);
@@ -59,6 +60,7 @@ impl<const SIZE: usize> Write for RingBuffer<SIZE> {
 }
 
 impl<const SIZE: usize> Read for RingBuffer<SIZE> {
+    #[inline(always)]
     fn read(&mut self, mut buf: &mut [u8]) -> Result<usize, Self::Error> {
         let head = self.head.load(Ordering::SeqCst);
         let tail = self.tail.load(Ordering::SeqCst);

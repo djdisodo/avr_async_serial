@@ -153,6 +153,7 @@ checksum = "723dce4e9f25b6e6c5f35628e144794e5b459216ed7da97b7c4b66cdb3fa82ca"
 [[package]]
 name = "env_int"
 version = "0.2.0"
+source = "git+https://github.com/djdisodo/env_int.git#27b25ea03b288955c20e7cde776e9dd5d62b8cf0"
 dependencies = [
  "derive-syn-parse",
  "proc-macro2",

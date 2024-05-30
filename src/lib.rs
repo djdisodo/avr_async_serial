@@ -470,9 +470,10 @@ macro_rules! impl_usart_traditional {
     use crate::USART_FLAG;
     use embedded_io::{Read, Write};
     use avr_hal_generic::usart::Baudrate;
+    use atmega_hal::port;
 
     macro_rules! usart_0 {
-        ($i:ident) => {
+        ($i:ident, $rx:ty, $tx:ty) => {
             impl_usart_traditional! {
                 peripheral_usart: avr_device::$i::USART0,
                 peripheral: avr_device::$i::Peripherals,
@@ -480,16 +481,33 @@ macro_rules! impl_usart_traditional {
                 interrupt_r: USART_RX,
                 interrupt_w: USART_UDRE,
                 mcu: $i,
-                rx: atmega_hal::port::PD0,
-                tx: atmega_hal::port::PD1,
+                rx: $rx,
+                tx: $tx,
+            }
+        };
+    }
+
+    macro_rules! usart_0_multi {
+        ($i:ident, $rx:ty, $tx:ty) => {
+            impl_usart_traditional! {
+                peripheral_usart: avr_device::$i::USART0,
+                peripheral: avr_device::$i::Peripherals,
+                register_suffix: 0,
+                interrupt_r: USART0_RX,
+                interrupt_w: USART0_UDRE,
+                mcu: $i,
+                rx: $rx,
+                tx: $tx,
             }
         };
     }
 
     #[cfg(feature = "atmega168")]
-    usart_0!(atmega168);
+    usart_0!(atmega168, port::PD0, port::PD1);
     #[cfg(feature = "atmega328p")]
-    usart_0!(atmega328p);
+    usart_0!(atmega328p, port::PD0, port::PD1);
+    #[cfg(feature = "atmega2560")]
+    usart_0_multi!(atmega2560, port::PE0, port::PE1);
 }
 #[cfg(feature = "usart0")]
 pub use usart0::*;

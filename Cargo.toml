@@ -13,7 +13,7 @@ embedded-io = "0.6.1"
 avr-device = { version = "0.5.4", features = ["rt"] }
 paste = "1.0.14"
 portable-atomic = "1.5.1"
-env_int = { path = "../env_int" }
+env_int = { git = "https://github.com/djdisodo/env_int.git" }
 
 [dependencies.atmega-hal]
 git = "https://github.com/rahix/avr-hal"
@@ -24,7 +24,7 @@ git = "https://github.com/rahix/avr-hal.git"
 rev = "3e362624547462928a219c40f9ea8e3a64f21e5f"
 
 [features]
-default = ["usart0", "atmega328p"]
+default = ["usart0"]
 usart0 = []
 cobs0 = ["usart0"]
 
